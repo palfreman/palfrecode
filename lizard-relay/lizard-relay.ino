@@ -4,7 +4,7 @@
 
 const int cold_r = 9; // Pin of relay for cold light, e.g. UVB
 const int hot_r = 10; // Pin of relay for hot relay, e.g. heater
-const int read_delay = 300; // Seconds delay between temp readings
+const unsigned long read_delay = 60; // Seconds delay between temp readings
 const int too_hot = 30; // Temp *C that is too hot
 const int too_cold = 18; // Temp *C that is too cold
 const int fence = 2; // Amount *C temp must move before changing. To stop flicker.
