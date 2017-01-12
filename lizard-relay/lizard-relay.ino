@@ -4,9 +4,9 @@
 
 const int cold_r = 9; // Pin of relay for cold light, e.g. UVB
 const int hot_r = 10; // Pin of relay for hot relay, e.g. heater
-const unsigned long read_delay = 60; // Seconds delay between temp readings
+const unsigned long read_delay = 60; // Seconds delay between temp readings.
 const int too_hot = 30; // Temp *C that is too hot
-const int too_cold = 18; // Temp *C that is too cold
+const int too_cold = 22; // Temp *C that is too cold. 18 in use and room temp to test in your hand.
 const int fence = 2; // Amount *C temp must move before changing. To stop flicker.
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -28,26 +28,7 @@ void setup() {
     }
 
 void loop() {
-    float t = dht.readTemperature();
-
-    // Check if any temp reads failed and retry indefintely. This is a safety feature.
-    int fail_count = 0;
-    while (isnan(t)) {
-        fail_count++;
-        Serial.println("Failed to read from DHT sensor!");
-        // Happens occasionally, so give it opportunity to retry before taking action.
-        if (fail_count > 10) {
-            // Do the default, which is HIGH state for both.
-            // So the cold relay will be NO=>on, and the hot relay NC=>off
-            // which is the strip light on and the heater off. We can loop here forever if need be.
-            Serial.println("Going HIGH");
-            digitalWrite(cold_r,HIGH); // strip light on
-            digitalWrite(hot_r,HIGH); // supplimentary heater off
-        }
-        delay(5000);
-        t = dht.readTemperature();
-    }
-
+    float t = get_temp_wait();
     Serial.print("Temperature: ");
     Serial.print(t);
     Serial.println("C ");
@@ -56,7 +37,7 @@ void loop() {
     if (t > too_hot) {
         digitalWrite(cold_r,LOW); // Strip light off
         digitalWrite(hot_r,HIGH); // Heater off
-        Serial.println("Set cold relay LOW (strip light off) and hot relay HIGH (heater off)");
+        Serial.println("Too hot. Set cold relay LOW (strip light off) and hot relay HIGH (heater off)");
 
         // Wait until the temperature falls below threshold
         while ((t + fence) > too_hot) {
@@ -66,9 +47,9 @@ void loop() {
             Serial.print(too_hot - fence);
             Serial.println("C");
             delay(read_delay*1000);
-            t = dht.readTemperature();
+            t = get_temp_wait();
         }
-        Serial.print(" Temp normal @ ");
+        Serial.print("Temp no longer too hot @ ");
         Serial.print(t);
         Serial.println("C. Turning light back on");
         digitalWrite(cold_r,HIGH); // Strip light on
@@ -89,12 +70,40 @@ void loop() {
             Serial.print(too_cold + fence);
             Serial.println("C");
             delay(read_delay*1000);
-            t = dht.readTemperature();
+            t = get_temp_wait();
         }
-        Serial.print(" Temp normal @ ");
+        Serial.print("Temp normal @ ");
         Serial.print(t);
         Serial.println("C. Turning supplimentary heater off");
         digitalWrite(hot_r,HIGH);
+
+        // Skip the long delay. We know it is no longer too cold, but it might be now too hot. Back the beginning to make sure.
+        delay(5000);
+        return;
     }
     delay(read_delay*1000);
+}
+
+// Function to always get a temperature reading. The sensor occasionally fails and returns nan, which should be retried until it works
+// If the sensor fails completely, the relays should go into their unpowered state of HIGH, which is the UV light being NO=>on and the 
+// supplementary heater being NC=>off.
+float get_temp_wait() {
+    float my_temp = dht.readTemperature();
+    int my_fail_count = 0;
+    while (isnan(my_temp)) {
+        my_fail_count++;
+        Serial.println("Failed to read from DHT sensor!");
+        // Happens occasionally, so give it opportunity to retry before taking action.
+        if (my_fail_count > 10) {
+            // Do the default, which is HIGH state for both.
+            // So the cold relay will be NO=>on, and the hot relay NC=>off
+            // which is the strip light on and the heater off. We can loop here forever if need be.
+            Serial.println("Going HIGH, strip light on and heater off");
+            digitalWrite(cold_r,HIGH); // strip light on
+            digitalWrite(hot_r,HIGH); // supplimentary heater off
+        }
+        delay(5000); // Minimum read interval is 2 seconds, so wait 5.
+        my_temp = dht.readTemperature();
+    }
+    return my_temp;
 }
