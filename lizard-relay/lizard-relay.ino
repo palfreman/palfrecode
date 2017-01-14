@@ -14,13 +14,14 @@ void setup() {
     delay(5000); // Open serial monitor
     dht.begin();
     Serial.begin(9600);
+    Serial.println();
     Serial.print("Thresholds: too_cold=");
     Serial.print(too_cold);
-    Serial.print("C : too_hot=");
+    Serial.print("C too_hot=");
     Serial.print(too_hot);
-    Serial.print("C : fence=");
+    Serial.print("C fence=");
     Serial.print(fence);
-    Serial.print("C : read_delay=");
+    Serial.print("C read_delay=");
     Serial.print(read_delay);
     Serial.println("s");
     pinMode(cold_r,OUTPUT);
