@@ -1,0 +1,191 @@
+sp -> 124 125 126 127
+pushl $3
+sp -> 120 121 122 123 : 124 125 126 127
+                          0   0   0   3
+
+pushl $5
+sp -> 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+                          0   0   0   5     0   0   0   3
+
+call myfunc
+sp -> 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+                      :         %eip   :   0   0   0   5 :   0   0   0   3
+
+pushl %ebp
+sp -> 108 109 110 111 : 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+                                %ebp    :         %eip   :   0   0   0   5 :   0   0   0   3
+
+movl %esp, %ebp
+bp - > 108
+
+sub $4, $esp
+sp -> 104 105 106 107 : 108 109 110 111 : 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+                                                  %ebp    :         %eip    :   0   0   0   5 :   0   0   0   3
+
+movl 8(%ebp), %ebx
+bx -> 116 -> %eip   -> wrong
+
+Assuming bp is 112
+bx -> 120 -> 5    -> correct
+start again with new assumption
+
+sp -> 128 at start, one off the scale
+pushl $3
+sp -> 124 125 126 127
+        0   0   0   3
+
+pushl $2
+sp -> 120 121 122 123 : 124 125 126 127
+        0   0   0   2 :   0   0   0   3
+
+call power
+sp -> 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+           %eip       :   0   0   0   2 :   0   0   0   3
+
+power: 
+pushl %ebp
+sp -> 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+        old %ebp      :      %eip       :   0   0   0   2 :   0   0   0   3
+
+movl $esp, %ebp
+bp -> 112
+
+subl $4, %esp
+sp -> 108 109 110 111 : 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+                      :     old  %ebp   :      %eip       :   0   0   0   2 :   0   0   0   3
+
+movl 8(%ebp), %ebx
+bx -> 8+112 -> 120 -> $2
+
+movl 12(%ebp), %ecx
+cx -> 12+112 -> 124 -> $3
+
+movl %ebx, -4(%ebp)
+move $2 into 112-4=108
+sp   -> 108 109 110 111 : 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+bp-4 ->   0   0   0   2 :     old  %ebp   :      %eip       :   0   0   0   2 :   0   0   0   3
+
+power_loop_start:
+cmpl $1, %ecx; je end_power
+%ecx -> $3, so no jump
+
+movl -4(%ebp), %eax
+112-4=108 -> 2 -> %eax
+
+imul %ebx, %eax
+bx = $2, ax = 2
+2x2=4 -> ax
+%eax = $4
+
+movl %eax, -4(%ebp)
+108 -> $4
+sp   -> 108 109 110 111 : 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+bp-4 ->   0   0   0   4 :     old  %ebp   :      %eip       :   0   0   0   2 :   0   0   0   3
+
+decl %ecx
+%ecx -> $2
+
+jmp  power_loop_start
+power_loop_start:
+cmpl $1, %ecx
+je end_power, but it's not, its $2 so carry on
+
+movl -4(%ebp), %eax 
+108 -> $4 -> %eax
+
+imul %ebx, %eax
+%ebx=$2, %eax=$4
+4x2=8 -> %eax
+
+movl %eax, -4(%ebp)
+move $8 into 112-4=108
+
+sp   -> 108 109 110 111 : 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+bp-4 ->   0   0   0   8 :     old  %ebp   :      %eip       :   0   0   0   2 :   0   0   0   3
+
+decl %ecx -> $1
+jmp power_loop_start
+power_loop_start:
+cmpl $1, %ecx 
+je end_power # and it is equal 1 $, so jumps
+
+########
+#start version where end on zero iteration instead of one
+cmpl $0, %ecx
+je end_power    # but isn't equal, so carry on
+movl -4(%ebp), %eax
+# %eax = $8
+
+imul %ebx, %eax
+%ebx = $2, %eax = $8
+$16 -> %eax
+
+movl %eax, -4(%ebp)
+## Etc. Answer will come put wrong of decrementing to 0.
+## Adds one ot every power when called, so wrong
+#End iteration to zero version
+##################
+
+end_power:
+movl -4(%ebp), %eax
+move 112-4=108 -> $8 -> %eax
+movl %ebp, %esp  #seeing as we didn't use sp this could all be simplified
+
+sp   -> 112 113 114 115 : 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+     ->     old  %ebp   :      %eip       :   0   0   0   2 :   0   0   0   3
+
+popl %ebp
+
+sp   -> 116 117 118 119 : 120 121 122 123 : 124 125 126 127
+     ->      %eip       :   0   0   0   2 :   0   0   0   3
+
+ret   # popping the next item into %eip
+
+sp   -> 120 121 122 123 : 124 125 126 127
+     ->   0   0   0   2 :   0   0   0   3
+
+##################################
+# "p0" zero power version
+#
+sp -> 32        # assuming 31 is top of memory.
+                # Where does sp really point before it is used?
+pushl $0
+sp -> 28 28 30 31
+            0
+
+pushl $2
+sp -> 24 25 26 27 : 28 29 30 31
+            2           0
+
+call power
+sp -> 20 21 22 23 : 24 25 26 27 : 28 29 30 31
+         %eip     :     2       :       0
+
+power:
+pushl %ebp
+sp -> 16 17 18 19 : 20 21 22 23 : 24 25 26 27 : 28 29 30 31
+       old %ebp   :    %eip     :     2       :       0
+
+movl %esp, %ebp
+# Use base pointer instead of stack pointer now
+
+sp -> 16 17 18 19 : 20 21 22 23 : 24 25 26 27 : 28 29 30 31
+bp ->  old %ebp   :    %eip     :     2       :       0
+
+subl $4, %esp   # seems pointless
+sp -> 12 13 14 15 : 16 17 18 19 : 20 21 22 23 : 24 25 26 27 : 28 29 30 31
+               bp -> old %ebp   :    %eip     :     2       :       0
+
+movl 8(%ebp), %ebx  # First arg
+# %ebx = 2
+
+movl 12(%ebp), %ecx
+# %ecx = 0
+
+power_loop_start:
+cmpl $1, %ecx
+je end_power
+# Is not equal, is 0
+
+## will overflow
+

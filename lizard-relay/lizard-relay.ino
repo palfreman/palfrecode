@@ -1,3 +1,5 @@
+// How to avoid the get_temp_wait flip flop?
+
 #include <DHT.h>
 #define DHTPIN 8
 #define DHTTYPE DHT22
@@ -6,7 +8,7 @@ const int cold_r = 9; // Pin of relay for cold light, e.g. UVB
 const int hot_r = 10; // Pin of relay for hot relay, e.g. heater
 const unsigned long read_delay = 60; // Seconds delay between temp readings
 const int too_hot = 30; // Temp *C that is too hot
-const int too_cold = 18; // Temp *C that is too cold
+const int too_cold = 21; // Temp *C that is too cold
 const int fence = 2; // Amount *C temp must move before changing. To stop flicker.
 DHT dht(DHTPIN, DHTTYPE);
 
